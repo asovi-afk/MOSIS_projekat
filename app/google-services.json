@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "284856511794",
+    "project_id": "mosis-main",
+    "storage_bucket": "mosis-main.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:284856511794:android:c324e4c62c078996297b2b",
+        "android_client_info": {
+          "package_name": "com.bmogroup.stepby"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "284856511794-kt42r0bcfhqe1s9qm7f0ive53rvlsm6d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByzIbINVJK44GZFiAxJEeFYtYDaQ3656E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "284856511794-kt42r0bcfhqe1s9qm7f0ive53rvlsm6d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
