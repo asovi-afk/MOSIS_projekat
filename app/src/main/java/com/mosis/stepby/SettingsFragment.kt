@@ -28,9 +28,7 @@ class SettingsFragment : Fragment() {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
 
         binding.tvSignOut.setOnClickListener {
-            Firebase.auth.signOut()
-            val navController = findNavController()
-            navController.navigate(R.id.action_settingsFragment_to_welcomeFragment)
+            mainVM.signOut.value = true
         }
 
 

@@ -116,7 +116,7 @@
         <action
             android:id="@+id/action_settingsFragment_to_welcomeFragment"
             app:destination="@id/welcomeFragment"
-            app:popUpTo="@id/welcomeFragment"
+            app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="true" />
     </fragment>
 </navigation>

@@ -9,11 +9,13 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.view.forEach
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.fragment.findNavController
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.databinding.ActivityMainBinding
@@ -54,13 +56,17 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.showBNV.observe(this, Observer { show -> binding.bottomNavigationView.visibility = if (show) View.VISIBLE else View.GONE})
 
+        viewModel.signOut.observe(this, Observer {
+            Firebase.auth.signOut()
+            binding.bottomNavigationView.menu.findItem(R.id.home)?.isChecked = true
+            navController.navigate(R.id.action_settingsFragment_to_welcomeFragment)
+        })
     }
 
     override fun onBackPressed() {
         binding.bottomNavigationView.menu.findItem(R.id.home)?.isChecked = true
         super.onBackPressed()
     }
-
 
     private fun setBottomNavigationView() {
         binding.bottomNavigationView.menu.forEach {
