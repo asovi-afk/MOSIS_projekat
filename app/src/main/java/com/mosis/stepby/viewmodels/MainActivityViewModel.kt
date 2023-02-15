@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 
 class MainActivityViewModel : ViewModel() {
     val locked = MutableLiveData<Boolean>()
+    val showBNV = MutableLiveData<Boolean>(false)
 
     private lateinit var currentUserKey: String
 
