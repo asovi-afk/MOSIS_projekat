@@ -31,8 +31,7 @@ class SettingsFragment : Fragment() {
 
         binding.tvSignOut.setOnClickListener {
             val intent = Intent(activity, GPSService::class.java)
-            intent.putExtra(GPSService.CLEAR_USER, true) // value is not important
-            activity?.startService(intent)
+            activity?.stopService(intent)
             mainVM.signOut.value = true
         }
 

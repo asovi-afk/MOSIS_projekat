@@ -138,10 +138,11 @@ class HomeFragment : Fragment() {
 
             override fun onServiceDisconnected(p0: ComponentName?) {
                 Log.d(TAG, "onServiceDisconnected")
-                // For some reason this code won't be called when minimizing activity with this home fragment on top of fragmentStack.
-                // Any other combination works as intended.
-                // Therefore, this line of code is directly called from onPause() method instead.
-                //service.currentPosition.removeObserver(currentPositionObserver)
+                // For some reason this code won't be called when minimizing activity with this home fragment on top of fragmentStack. All other combinations work as intended.
+                // Therefore, this line of code is directly called from within onPause() method too.
+
+                // It should also be invoked here in the event that the service is stopped. ( Signing out )
+                service.currentPosition.removeObserver(currentPositionObserver)
             }
         }
     }

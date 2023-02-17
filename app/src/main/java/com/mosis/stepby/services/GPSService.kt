@@ -73,12 +73,6 @@ class GPSService: Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand()")
-
-        if (intent?.hasExtra(CLEAR_USER) != null) {
-            currentUserEmail = null
-            Log.d(TAG, "ClearUserEmail")
-        }
-
         return START_STICKY
     }
 
@@ -123,8 +117,11 @@ class GPSService: Service() {
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
         }
 
+        // GPS based
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
             500L, 1.0f, locationListener)
+        // Network based
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000L, 5.0f, locationListener )
     }
 
     private fun generateNotification(): Notification {
