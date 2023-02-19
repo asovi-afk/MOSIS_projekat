@@ -63,7 +63,7 @@ class HomeFragmentViewModel: ViewModel() {
             }
 
             onFriendListChangeRegistration = firestore.collection(FirestoreCollections.USERS).document(userEmail).addSnapshotListener {value, error ->
-                if (error == null && value != null) coroutineScope.launch { mutex.withLock { friendList = value.get(UserInfoKeys.FRIENDS) as List<String> } }
+                if (error == null && value != null) coroutineScope.launch { mutex.withLock { friendList = value.get(UserInfoKeys.FRIENDS) as List<String> };  resendOtherUsersLocaton()}
             }
             // start coroutine that will listen on locationSnapshotCH for newest positions
             coroutineScope.launch { onLocationChangeLogic() }
