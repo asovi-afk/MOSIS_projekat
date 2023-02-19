@@ -156,9 +156,12 @@ class HomeFragmentViewModel: ViewModel() {
         while(true) {
             delay(BITMAP_CACHE_MAINTENANCE_CYCLE)
             mutex.withLock {
-                if (friendList.isNotEmpty())
-                    for(pair in bitmapList)
-                        if (!friendList.contains(pair.first)) bitmapList.remove(pair)
+                if (friendList.isNotEmpty()) {
+                    val bitmapsToRemove = mutableListOf<Pair<String, Bitmap>>()
+                    for (pair in bitmapList)
+                        if (!friendList.contains(pair.first)) bitmapsToRemove.add(pair)
+                    for (pair in bitmapsToRemove) bitmapList.remove(pair)
+                }
             }
         }
     }
