@@ -21,6 +21,7 @@ import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.databinding.ActivityMainBinding
 import com.mosis.stepby.viewmodels.MainActivityViewModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.GlobalScope.coroutineContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,8 +33,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
-
-        //trySignOut()    // Starts app without logged in user
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -117,14 +116,6 @@ class MainActivity : AppCompatActivity() {
                 item.isChecked = true
             }
             true
-        }
-    }
-
-    private fun trySignOut() {
-        val auth = Firebase.auth
-        if (auth.currentUser != null) {
-            auth.signOut()
-            Log.d(TAG, "User signed out.")
         }
     }
 

@@ -5,6 +5,7 @@ object UserInfoKeys {
     const val FULL_NAME = "fullName"
     const val PHONE ="phone"
     const val PROFILE_PICTURE = "profilePicture"
+    const val FRIENDS = "friends"
 }
 
 object UserLocationKeys {

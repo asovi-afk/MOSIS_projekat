@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.IBinder
 import android.preference.PreferenceManager
@@ -18,17 +19,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.databinding.FragmentHomeBinding
 import com.mosis.stepby.services.GPSService
+import com.mosis.stepby.utils.OtherUserInfo
 import com.mosis.stepby.viewmodels.HomeFragmentViewModel
 import com.mosis.stepby.viewmodels.MainActivityViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.osmdroid.config.Configuration.*
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -37,11 +36,13 @@ import org.osmdroid.views.overlay.Marker
 class HomeFragment : Fragment() {
 
     private val mainVM: MainActivityViewModel by activityViewModels()
+    private val viewModel: HomeFragmentViewModel by activityViewModels()
     private lateinit var binding: FragmentHomeBinding
 
     private lateinit var markerCurrentPosition: Marker
-
+    private lateinit var userPositionsObserver: Observer<List<OtherUserInfo>>
     private lateinit var currentPositionObserver: Observer<GeoPoint>
+    private lateinit var showOtherUsersObserver: Observer<Boolean>
 
     private lateinit var connection: ServiceConnection
     private lateinit var service: GPSService
@@ -59,6 +60,7 @@ class HomeFragment : Fragment() {
                 activity?.startService(intent) // so service won't get destroyed when nothing binds to it
             }
 
+        generateObservers()
     }
 
     override fun onCreateView(
@@ -71,14 +73,14 @@ class HomeFragment : Fragment() {
         getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context));
 
         binding = FragmentHomeBinding.inflate(inflater, container, false)
-
         markerCurrentPosition = Marker(binding.map)
         markerCurrentPosition.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         markerCurrentPosition.icon = ContextCompat.getDrawable(context!!, R.drawable.ic_current_position_marker_24)
         binding.map.setTileSource(TileSourceFactory.MAPNIK)
-        binding.map.controller.setZoom(17.0)
+        binding.map.controller.setZoom(16.0)
         binding.map.controller.setCenter(GeoPoint(43.32472, 21.90333))
 
+        binding.swcShowOtherUsers.setOnClickListener { viewModel.showOtherUsers.value = !(viewModel.showOtherUsers.value!!) }
 
         return binding.root
     }
@@ -101,6 +103,10 @@ class HomeFragment : Fragment() {
             }
         }
 
+        viewModel.startListeningForLocationChanges()
+        viewModel.otherUsersChanges.observe(this, userPositionsObserver)
+        viewModel.showOtherUsers.observe(this, showOtherUsersObserver)
+
         binding.map.onResume()
     }
 
@@ -113,6 +119,9 @@ class HomeFragment : Fragment() {
             serviceValid = false
         }
 
+        viewModel.stopListeningForLocationChanges()
+        viewModel.otherUsersChanges.removeObserver(userPositionsObserver)
+        viewModel.showOtherUsers.removeObserver(showOtherUsersObserver)
         super.onPause()
     }
 
@@ -123,15 +132,7 @@ class HomeFragment : Fragment() {
                 val binder = ibinder as GPSService.GPSBinder
                 service = binder.service
                 serviceValid = true
-                currentPositionObserver = Observer { point ->
-                    binding.map.run {
-                        controller.setCenter(point)
-                        Log.d(TAG, "point: long: ${point.longitude}, latit: ${point.latitude}")
-                        markerCurrentPosition.position = point
-                        overlays.add(markerCurrentPosition)
-                        invalidate()
-                    }
-                }
+
                 service.currentPosition.observe(viewLifecycleOwner, currentPositionObserver)
                 service.setUserEmail(Firebase.auth.currentUser?.email!!)
             }
@@ -152,6 +153,52 @@ class HomeFragment : Fragment() {
             ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
     }
+
+    private fun generateObservers() {
+        currentPositionObserver = Observer { point ->
+            binding.map.run {
+                controller.setCenter(point)
+                Log.d(TAG, "point: long: ${point.longitude}, latit: ${point.latitude}")
+                markerCurrentPosition.position = point
+                overlays.add(markerCurrentPosition)
+                invalidate()
+            }
+        }
+
+        userPositionsObserver = Observer { list ->
+            if (viewModel.showOtherUsers.value!!) {
+                val map = binding.map
+                map.overlays.clear()
+                for (info in list) {
+                    val marker = Marker(map)
+                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    marker.position = info.point
+                    marker.icon = if (info.picture != null)
+                        BitmapDrawable(resources, info.picture)
+                    else
+                        ContextCompat.getDrawable(context!!, R.drawable.ic_marker)
+                    map.overlays.add(marker)
+                }
+                map.overlays.add(markerCurrentPosition)
+                map.invalidate()
+            }
+        }
+
+        showOtherUsersObserver = Observer {
+            binding.swcShowOtherUsers.isChecked = it
+
+            if (it)
+                viewModel.resendOtherUsersLocaton()
+            else {
+                binding.map.run {
+                    overlays.clear()
+                    overlays.add(markerCurrentPosition)
+                    invalidate()
+                }
+            }
+        }
+    }
+
 
     companion object {
         const val TAG = "HomeFragment"

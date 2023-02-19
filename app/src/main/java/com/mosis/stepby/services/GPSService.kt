@@ -79,6 +79,9 @@ class GPSService: Service() {
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
         locationManager.removeUpdates(locationListener)
+        // Remove from global map
+        if (currentUserEmail != null)
+            Firebase.firestore.collection(FirestoreCollections.USER_LOCATIONS).document(currentUserEmail!!).delete()
         stopForeground(true)
         super.onDestroy()
     }
@@ -146,8 +149,6 @@ class GPSService: Service() {
     }
 
     companion object {
-        const val CLEAR_USER = "clearUser"
-
         private const val TAG = "GPSService"
         private const val NOTIFICATION_ID = 123456
         private const val NOTIFICATION_CHANNEL_ID = "gps_service_channel_001"

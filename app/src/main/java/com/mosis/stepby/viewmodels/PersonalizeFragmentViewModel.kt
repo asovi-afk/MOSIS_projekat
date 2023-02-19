@@ -60,9 +60,9 @@ class PersonalizeFragmentViewModel: ViewModel() {
                 UserInfoKeys.USERNAME to username,
                 UserInfoKeys.FULL_NAME to fullName,
                 UserInfoKeys.PHONE to phone,
+                UserInfoKeys.FRIENDS to listOf<String>(),
+                UserInfoKeys.PROFILE_PICTURE to if (!picName.isNullOrBlank()) picName!! else DEFAULT_PROFILE_PICTURE
                 )
-            if (!picName.isNullOrBlank())
-                userInfo[UserInfoKeys.PROFILE_PICTURE] = picName!!
 
             val usersRef  = db.collection(FirestoreCollections.USERNAMES).document(FirestoreCollections.USERNAMES)
             val t = db.runTransaction {
@@ -95,5 +95,6 @@ class PersonalizeFragmentViewModel: ViewModel() {
 
     companion object {
         const val TAG = "PersonalizeFragmentViewModel"
+        const val DEFAULT_PROFILE_PICTURE = "DEFAULT_PROFILE_PICTURE"
     }
 }
