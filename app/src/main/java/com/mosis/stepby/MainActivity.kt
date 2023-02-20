@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
 
     private lateinit var navController: NavController
+    private val auth = Firebase.auth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,10 +61,13 @@ class MainActivity : AppCompatActivity() {
         viewModel.showBNV.observe(this, Observer { show -> binding.bottomNavigationView.visibility = if (show) View.VISIBLE else View.GONE})
 
         viewModel.signOut.observe(this, Observer {
-            stopServices()
-            Firebase.auth.signOut()
-            binding.bottomNavigationView.menu.findItem(R.id.home)?.isChecked = true
-            navController.navigate(R.id.action_settingsFragment_to_welcomeFragment)
+            if (it) {
+                stopServices()
+                auth.signOut()
+                viewModel.loggedIn.value = false
+                binding.bottomNavigationView.menu.findItem(R.id.home)?.isChecked = true
+                navController.navigate(R.id.action_settingsFragment_to_welcomeFragment)
+            }
         })
 
         viewModel.loggedIn.observe(this, Observer { if (it) startServicesInBackground()})
@@ -75,11 +79,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        if (!viewModel.runBackground.value!!) stopServices() else startServicesInForeground()
+        if (viewModel.loggedIn.value!! && viewModel.runBackground.value!!) startServicesInForeground() else stopServices()
         super.onPause()
     }
 
-    override fun onResume() {
+    override fun onResume() {   
         super.onResume()
         if (viewModel.loggedIn.value!!) startServicesInBackground()
     }
@@ -90,8 +94,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startServicesInBackground() {
+        val userEmail = auth.currentUser?.email
         Intent(this, GPSService::class.java).also { intent ->
             intent.putExtra(GPSService.STOP_FOREGROUND, true)
+            intent.putExtra(GPSService.USER_EMAIL, userEmail)
             startService(intent) // so service won't get destroyed when nothing binds to it
         }
     }

@@ -76,6 +76,8 @@ class GPSService: Service() {
                 startForeground(NOTIFICATION_ID, notification)
                 serviceRunningInForeground = true
             } else if(intent.getBooleanExtra(STOP_FOREGROUND, false) && serviceRunningInForeground) { stopForeground(true); serviceRunningInForeground = false}
+            val newUserEmail = intent.getStringExtra(USER_EMAIL)
+            if (!newUserEmail.isNullOrBlank()) { currentUserEmail = newUserEmail }
         }
 
         return START_STICKY
@@ -157,6 +159,7 @@ class GPSService: Service() {
     companion object {
         const val START_FOREGROUND = "START_FOREGROUND"
         const val STOP_FOREGROUND = "STOP_FOREGROUND"
+        const val USER_EMAIL = "USER_EMAIL"
 
         private const val TAG = "GPSService"
         private const val NOTIFICATION_ID = 123456

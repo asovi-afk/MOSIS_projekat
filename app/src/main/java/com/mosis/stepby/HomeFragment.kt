@@ -53,6 +53,7 @@ class HomeFragment : Fragment() {
         Log.d(TAG, "onCreate()")
 
         mainVM.loggedIn.value = true
+        mainVM.signOut.value = false
 
         generateObservers()
     }
