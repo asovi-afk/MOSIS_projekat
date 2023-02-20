@@ -17,5 +17,14 @@
             android:layout_height="wrap_content"
             android:textColor="@color/white"
             android:text="Sign out " />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swcRunInBackground"
+            android:checked="true"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="5dp"
+            android:text="run services in background" />
     </LinearLayout>
 </FrameLayout>

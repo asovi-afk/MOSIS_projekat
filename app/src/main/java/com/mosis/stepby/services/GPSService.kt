@@ -48,9 +48,6 @@ class GPSService: Service() {
         Log.d(TAG, "onCreate()")
         registerLocationListener()
 
-        val notification = generateNotification()
-        startForeground(NOTIFICATION_ID, notification)
-        serviceRunningInForeground = true
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -66,23 +63,31 @@ class GPSService: Service() {
     override fun onUnbind(intent: Intent?): Boolean {
         Log.d(TAG, "onUnbind()")
 
-
         // Da bi se pozivala reBind
         return true
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand()")
+
+        if (intent != null) {
+            if (intent.getBooleanExtra(START_FOREGROUND, false) && !serviceRunningInForeground) {
+                val notification = generateNotification()
+                startForeground(NOTIFICATION_ID, notification)
+                serviceRunningInForeground = true
+            } else if(intent.getBooleanExtra(STOP_FOREGROUND, false) && serviceRunningInForeground) { stopForeground(true); serviceRunningInForeground = false}
+        }
+
         return START_STICKY
     }
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
         locationManager.removeUpdates(locationListener)
-        // Remove from global map
+        // Remove position from server
         if (currentUserEmail != null)
             Firebase.firestore.collection(FirestoreCollections.USER_LOCATIONS).document(currentUserEmail!!).delete()
-        stopForeground(true)
+        if (serviceRunningInForeground) stopForeground(true)
         super.onDestroy()
     }
 
@@ -113,7 +118,7 @@ class GPSService: Service() {
                 }
             }
 
-            // da ne bi pucalo kod starijih verzija
+            // So it won't break with older API versions
             // https://stackoverflow.com/questions/64638260/android-locationlistener-abstractmethoderror-on-onstatuschanged-and-onproviderd/69539440#69539440
             override fun onProviderEnabled( provider: String) {}
             override fun onProviderDisabled( provider: String) {}
@@ -138,6 +143,7 @@ class GPSService: Service() {
             .setSmallIcon(R.drawable.ic_launcher_round)
             .setContentTitle(resources.getString(R.string.app_name))
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setSilent(true)
 
         return notificationBuilder.build()
@@ -149,6 +155,9 @@ class GPSService: Service() {
     }
 
     companion object {
+        const val START_FOREGROUND = "START_FOREGROUND"
+        const val STOP_FOREGROUND = "STOP_FOREGROUND"
+
         private const val TAG = "GPSService"
         private const val NOTIFICATION_ID = 123456
         private const val NOTIFICATION_CHANNEL_ID = "gps_service_channel_001"

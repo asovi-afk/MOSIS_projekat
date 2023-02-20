@@ -1,5 +1,8 @@
 package com.mosis.stepby
 
+import android.app.ActivityManager
+import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -19,6 +22,7 @@ import androidx.navigation.fragment.findNavController
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.databinding.ActivityMainBinding
+import com.mosis.stepby.services.GPSService
 import com.mosis.stepby.viewmodels.MainActivityViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.GlobalScope.coroutineContext
@@ -56,15 +60,47 @@ class MainActivity : AppCompatActivity() {
         viewModel.showBNV.observe(this, Observer { show -> binding.bottomNavigationView.visibility = if (show) View.VISIBLE else View.GONE})
 
         viewModel.signOut.observe(this, Observer {
+            stopServices()
             Firebase.auth.signOut()
             binding.bottomNavigationView.menu.findItem(R.id.home)?.isChecked = true
             navController.navigate(R.id.action_settingsFragment_to_welcomeFragment)
         })
+
+        viewModel.loggedIn.observe(this, Observer { if (it) startServicesInBackground()})
     }
 
     override fun onBackPressed() {
         binding.bottomNavigationView.menu.findItem(R.id.home)?.isChecked = true
         super.onBackPressed()
+    }
+
+    override fun onPause() {
+        if (!viewModel.runBackground.value!!) stopServices() else startServicesInForeground()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (viewModel.loggedIn.value!!) startServicesInBackground()
+    }
+
+    private fun stopServices() {
+        val intent = Intent(this, GPSService::class.java)
+        stopService(intent)
+    }
+
+    private fun startServicesInBackground() {
+        Intent(this, GPSService::class.java).also { intent ->
+            intent.putExtra(GPSService.STOP_FOREGROUND, true)
+            startService(intent) // so service won't get destroyed when nothing binds to it
+        }
+    }
+
+    private fun startServicesInForeground() {
+        Intent(this, GPSService::class.java).also { intent ->
+            intent.putExtra(GPSService.START_FOREGROUND, true)
+            startService(intent)
+        }
     }
 
     private fun setBottomNavigationView() {

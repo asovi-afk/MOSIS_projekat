@@ -8,6 +8,8 @@ class MainActivityViewModel : ViewModel() {
     val locked = MutableLiveData<Boolean>()
     val showBNV = MutableLiveData<Boolean>(false)
     val signOut = MutableLiveData<Boolean>()
+    val runBackground = MutableLiveData<Boolean>(true)
+    val loggedIn = MutableLiveData<Boolean>(false)
 
     private lateinit var currentUserKey: String
 

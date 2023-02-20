@@ -52,13 +52,7 @@ class HomeFragment : Fragment() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate()")
 
-        val activityManager = activity?.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val runningServices = activityManager.getRunningServices(Int.MAX_VALUE)
-
-        if (! (runningServices.map { it.service.className }.contains(GPSService::class.java.name)))
-            Intent(context, GPSService::class.java).also { intent ->
-                activity?.startService(intent) // so service won't get destroyed when nothing binds to it
-            }
+        mainVM.loggedIn.value = true
 
         generateObservers()
     }
@@ -139,6 +133,8 @@ class HomeFragment : Fragment() {
 
             override fun onServiceDisconnected(p0: ComponentName?) {
                 Log.d(TAG, "onServiceDisconnected")
+                // NOTE: After changes to managing services don't know if this problem persists (haven't tested it).
+                // PROBLEM:
                 // For some reason this code won't be called when minimizing activity with this home fragment on top of fragmentStack. All other combinations work as intended.
                 // Therefore, this line of code is directly called from within onPause() method too.
 

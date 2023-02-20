@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -19,6 +20,8 @@ class SettingsFragment : Fragment() {
     private val mainVM: MainActivityViewModel by activityViewModels()
     private lateinit var binding: FragmentSettingsBinding
 
+    private lateinit var runInBackgroundObserver: Observer<Boolean>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }
@@ -29,14 +32,22 @@ class SettingsFragment : Fragment() {
     ): View? {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
 
-        binding.tvSignOut.setOnClickListener {
-            val intent = Intent(activity, GPSService::class.java)
-            activity?.stopService(intent)
-            mainVM.signOut.value = true
-        }
+        runInBackgroundObserver = Observer { binding.swcRunInBackground.isChecked = it}
 
+        binding.tvSignOut.setOnClickListener { mainVM.signOut.value = true }
+        binding.swcRunInBackground.setOnClickListener { mainVM.runBackground.value = !mainVM.runBackground.value!! }
 
         return binding.root
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mainVM.runBackground.observe(this, runInBackgroundObserver)
+    }
+
+    override fun onPause() {
+        mainVM.runBackground.removeObserver(runInBackgroundObserver)
+        super.onPause()
     }
 
     companion object {
