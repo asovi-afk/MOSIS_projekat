@@ -13,8 +13,8 @@
         <org.osmdroid.views.MapView
             android:id="@+id/map"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toTopOf="@id/llActivityDone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" >
@@ -32,59 +32,6 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-
-        <LinearLayout
-            android:id="@+id/llActivity"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/navbar_blue"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:paddingBottom="8dp"
-            android:visibility="visible"
-            app:layout_constraintBottom_toBottomOf="parent">
-
-            <TextView
-                android:id="@+id/tvDistanceValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0.00"
-                android:textColor="@color/white"
-                android:textSize="48sp"
-                android:textStyle="bold"
-                tools:layout_editor_absoluteX="152dp"
-                tools:layout_editor_absoluteY="373dp" />
-
-            <TextView
-                android:id="@+id/tvDistanceUnit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="km"
-                android:textColor="@color/white"
-                tools:layout_editor_absoluteX="153dp"
-                tools:layout_editor_absoluteY="412dp" />
-
-            <TextView
-                android:id="@+id/tvDurationValue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="00:00:00"
-                android:textColor="@color/white"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                tools:layout_editor_absoluteX="43dp"
-                tools:layout_editor_absoluteY="441dp" />
-
-            <TextView
-                android:id="@+id/tvDurationLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Duration"
-                android:textColor="@color/white"
-                tools:layout_editor_absoluteX="44dp"
-                tools:layout_editor_absoluteY="469dp" />
-
-        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/llActivityDone"
@@ -145,6 +92,62 @@
 
 
         </LinearLayout>
+
+
+        <LinearLayout
+            android:id="@+id/llActivity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/navbar_blue"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingBottom="8dp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <TextView
+                android:id="@+id/tvDistanceValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.00"
+                android:textColor="@color/white"
+                android:textSize="48sp"
+                android:textStyle="bold"
+                tools:layout_editor_absoluteX="152dp"
+                tools:layout_editor_absoluteY="373dp" />
+
+            <TextView
+                android:id="@+id/tvDistanceUnit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="km"
+                android:textColor="@color/white"
+                tools:layout_editor_absoluteX="153dp"
+                tools:layout_editor_absoluteY="412dp" />
+
+            <TextView
+                android:id="@+id/tvDurationValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00:00"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:layout_editor_absoluteX="43dp"
+                tools:layout_editor_absoluteY="441dp" />
+
+            <TextView
+                android:id="@+id/tvDurationLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Duration"
+                android:textColor="@color/white"
+                tools:layout_editor_absoluteX="44dp"
+                tools:layout_editor_absoluteY="469dp" />
+
+        </LinearLayout>
+
+
 
         <ImageView
             android:id="@+id/ivStopRun"
