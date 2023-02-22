@@ -3,8 +3,10 @@ package com.mosis.stepby.viewmodels
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.DocumentSnapshot
@@ -13,6 +15,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import com.mosis.stepby.utils.*
+import com.mosis.stepby.utils.running.IndependentRun
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
@@ -20,6 +23,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 import org.osmdroid.util.GeoPoint
 import java.lang.Integer.min
+import java.util.UUID
 
 /*
 * NOTES:
@@ -32,7 +36,8 @@ class HomeFragmentViewModel: ViewModel() {
     val showOtherUsers = MutableLiveData<Boolean>(true)
     val otherUsersChanges = MutableLiveData<List<OtherUserInfo>>()
 
-
+    private val _instantToast = MutableLiveData<String>()
+    val instantToast: LiveData<String> get() = _instantToast
 
     private val bitmapList: MutableList<Pair<String, Bitmap>> = mutableListOf()
     private val mutex = Mutex()  // Used to lock for simultaneous changes on bitmapList, otherUsersChanges and friendList.
@@ -90,6 +95,19 @@ class HomeFragmentViewModel: ViewModel() {
                 otherUsersChanges.postValue(latestPositions)
             }
         }
+    }
+
+    fun uploadRun(run: IndependentRun, name: String?) {
+        val newRun = hashMapOf(
+            RunKeys.DURATION to run.getDurationInSeconds(),
+            RunKeys.DISTANCE to run.currentDistance.toLong(),
+            RunKeys.FINISHED_AT to Timestamp.now(),
+            RunKeys.POINTS to run.path,
+            RunKeys.NAME to if (name.isNullOrBlank()) "My run" else name
+        )
+        firestore.collection(FirestoreCollections.RUNS).document(userEmail).collection(FirestoreCollections.RUNS).add(newRun)
+            .addOnSuccessListener { _instantToast.value = "Run saved." }
+            .addOnFailureListener { _instantToast.value = "Run not saved." }
     }
 
     private suspend fun onLocationChangeLogic() {

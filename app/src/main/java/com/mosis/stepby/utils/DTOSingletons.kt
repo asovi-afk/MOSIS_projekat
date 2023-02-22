@@ -17,8 +17,17 @@ object FirestoreCollections {
     const val USERNAMES = "usernames"
     const val USERS = "users"
     const val USER_LOCATIONS = "userLocations"
+    const val RUNS = "runs"
 }
 
 object StorageFolders {
     const val IMAGES = "images"
+}
+
+object RunKeys {
+    const val DURATION = "duration" // in seconds
+    const val DISTANCE = "distance" // in meters
+    const val POINTS = "points" // ordered
+    const val NAME = "name"
+    const val FINISHED_AT = "finishedAt"
 }

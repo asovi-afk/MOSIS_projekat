@@ -1,24 +1,20 @@
 package com.mosis.stepby.services
 
-import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.media.AudioAttributes
 import android.os.Binder
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import android.util.TimeFormatException
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.ktx.firestore
@@ -26,17 +22,22 @@ import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.R
 import com.mosis.stepby.utils.FirestoreCollections
 import com.mosis.stepby.utils.UserLocationKeys
+import com.mosis.stepby.utils.running.IndependentRun
+import com.mosis.stepby.utils.running.RunException
+import com.mosis.stepby.utils.running.RunStatus
 import org.osmdroid.util.GeoPoint
-import java.time.LocalDateTime
-import java.util.Date
 
 
 class GPSService: Service() {
 
-    var currentPosition = MutableLiveData<GeoPoint>()
+    private var _currentPosition = MutableLiveData<GeoPoint>()
+    val currentPosition: LiveData<GeoPoint> get() = _currentPosition
+    // activeRun - Because service can run in foreground it is best suited for keeping reference.
+    private var _activeRun = IndependentRun()
+    val activeRun: IndependentRun get() = _activeRun
+
 
     private var currentUserEmail: String? = null
-
     private var serviceRunningInForeground = false
     private val activityBinder = GPSBinder()
 
@@ -97,6 +98,9 @@ class GPSService: Service() {
         currentUserEmail = email
     }
 
+    fun createNewRun() {
+        _activeRun = IndependentRun()
+    }
 
     private fun registerLocationListener() {
 
@@ -108,7 +112,8 @@ class GPSService: Service() {
         locationListener = object: LocationListener {
             override fun onLocationChanged(location: Location) {
                 Log.d(TAG, "Location changed")
-                currentPosition.value = GeoPoint(location.latitude, location.longitude)
+                val newPoint = GeoPoint(location.latitude, location.longitude)
+                _currentPosition.postValue(newPoint)
 
                 if(currentUserEmail != null) {
                     val entry = hashMapOf(
@@ -118,6 +123,7 @@ class GPSService: Service() {
                     Firebase.firestore.collection(FirestoreCollections.USER_LOCATIONS).document(currentUserEmail!!)
                         .set(entry)
                 }
+                if (_activeRun.currentStatus.value == RunStatus.IN_PROGRESS) _activeRun.setCurrentPosition(newPoint)
             }
 
             // So it won't break with older API versions
