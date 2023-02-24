@@ -2,4 +2,10 @@
     <string name="app_name">StepBy</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="create_track">Make this run part of new Track</string>
+    <string name="cancel_create_track">Don\'t create new Track</string>
+    <string name="type_asphalt">Asphalt</string>
+    <string name="type_gravel">Gravel</string>
+    <string name="type_other">Other</string>
 </resources>

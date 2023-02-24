@@ -23,8 +23,8 @@
 
         <ImageView
             android:id="@+id/ivStartRun"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="@dimen/iv_dim"
+            android:layout_height="@dimen/iv_dim"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp"
             android:src="@drawable/ic_baseline_run_circle_24"
@@ -45,6 +45,70 @@
             android:visibility="visible"
             app:layout_constraintBottom_toTopOf="@id/llActivity">
 
+            <LinearLayout
+                android:id="@+id/llTrackCreation"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <EditText
+                    android:layout_marginHorizontal="25dp"
+                    android:id="@+id/editTrackName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ems="10"
+                    android:hint="track_name"
+                    android:textColorHint="@color/white"
+                    android:textColor="@color/white"
+                    android:inputType="textEmailAddress"
+                    android:minHeight="48dp"
+                    android:layout_weight="1"
+                    tools:ignore="SpeakableTextPresentCheck" />
+
+                <RadioGroup
+                    android:id="@+id/rgTrackFlooring"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" >
+                    <RadioButton
+                        android:id="@+id/rbAsphalt"
+                        android:checked="true"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/type_asphalt"/>
+                    <RadioButton
+                        android:id="@+id/rbGravel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/type_gravel"/>
+                    <RadioButton
+                        android:id="@+id/rbOther"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/type_other"/>
+
+                </RadioGroup>
+            </LinearLayout>
+
+
+
+            <TextView
+                android:id="@+id/tvPotentialTrack"
+                android:layout_marginStart="5dp"
+                android:layout_marginVertical="10dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:text="@string/create_track" />
+
+
+            <View
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="?android:attr/listDivider" />
+
             <EditText
                 android:layout_marginHorizontal="25dp"
                 android:id="@+id/editRunName"
@@ -59,6 +123,9 @@
                 android:minHeight="48dp"
                 tools:ignore="SpeakableTextPresentCheck" />
 
+
+
+
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
@@ -66,8 +133,8 @@
 
                 <ImageView
                     android:id="@+id/ivSaveRun"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
+                    android:layout_width="@dimen/iv_dim"
+                    android:layout_height="@dimen/iv_dim"
                     android:layout_marginEnd="8dp"
                     android:layout_marginBottom="8dp"
                     android:src="@drawable/ic_baseline_save_24"
@@ -78,8 +145,8 @@
 
                 <ImageView
                     android:id="@+id/ivDeleteRun"
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
+                    android:layout_width="@dimen/iv_dim"
+                    android:layout_height="@dimen/iv_dim"
                     android:layout_marginEnd="8dp"
                     android:layout_marginBottom="8dp"
                     android:src="@drawable/ic_baseline_delete_forever_24"

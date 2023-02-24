@@ -16,6 +16,9 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import com.mosis.stepby.utils.*
 import com.mosis.stepby.utils.running.IndependentRun
+import com.mosis.stepby.utils.running.Track
+import com.mosis.stepby.utils.running.TrackFlooring
+import com.mosis.stepby.utils.running.TrackRun
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
@@ -98,16 +101,23 @@ class HomeFragmentViewModel: ViewModel() {
     }
 
     fun uploadRun(run: IndependentRun, name: String?) {
-        val newRun = hashMapOf(
-            RunKeys.DURATION to run.getDurationInSeconds(),
-            RunKeys.DISTANCE to run.currentDistance.toLong(),
-            RunKeys.FINISHED_AT to Timestamp.now(),
-            RunKeys.POINTS to run.path,
-            RunKeys.NAME to if (name.isNullOrBlank()) "My run" else name
-        )
-        firestore.collection(FirestoreCollections.RUNS).document(userEmail).collection(FirestoreCollections.RUNS).add(newRun)
+        val runInfo  = run.formatForUpload(name, userEmail)
+        firestore.collection(FirestoreCollections.RUNS).add(runInfo)
             .addOnSuccessListener { _instantToast.value = "Run saved." }
             .addOnFailureListener { _instantToast.value = "Run not saved." }
+    }
+
+    fun uploadRunWithTrack(run: IndependentRun, _runName: String?, _trackName: String?, flooring: TrackFlooring) {
+        coroutineScope.launch {
+            val trackName = if(_trackName.isNullOrBlank()) Track.generateDefaultName(userEmail, firestore) else _trackName
+            val trackInfo = Track.formatForUpload(run.path, userEmail, flooring, trackName)
+            val trackID = firestore.collection(FirestoreCollections.TRACKS).add(trackInfo).await().id
+
+            val runInfo = TrackRun.formatIndependentRunForUpload(run, _runName, trackID, userEmail)
+            firestore.collection(FirestoreCollections.RUNS).add(runInfo)
+                .addOnSuccessListener { _instantToast.value = "Run saved." }
+                .addOnFailureListener { _instantToast.value = "Run not saved." }
+        }
     }
 
     private suspend fun onLocationChangeLogic() {

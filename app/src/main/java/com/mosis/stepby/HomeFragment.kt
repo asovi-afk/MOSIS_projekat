@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.RadioButton
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
@@ -29,8 +30,7 @@ import com.mosis.stepby.databinding.FragmentHomeBinding
 import com.mosis.stepby.services.GPSService
 import com.mosis.stepby.utils.OtherUserInfo
 import com.mosis.stepby.utils.durationToString
-import com.mosis.stepby.utils.running.RunException
-import com.mosis.stepby.utils.running.RunStatus
+import com.mosis.stepby.utils.running.*
 import com.mosis.stepby.viewmodels.HomeFragmentViewModel
 import com.mosis.stepby.viewmodels.MainActivityViewModel
 import kotlinx.coroutines.*
@@ -62,6 +62,8 @@ class HomeFragment : Fragment() {
 
     private var lastUsersMarkerList = listOf<Marker>()
     private lateinit var currentRunPath: Polyline
+
+    private val createTrack = MutableLiveData<Boolean>(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,15 +100,20 @@ class HomeFragment : Fragment() {
 
         binding.ivStartRun.setOnClickListener { try { if (serviceValid) service.activeRun.start(service.currentPosition.value) } catch(e: RunException) { toastMessage(e.message) }}
         binding.ivStopRun.setOnClickListener { try { if (serviceValid) service.activeRun.stop() } catch(e: RunException) {toastMessage(e.message)}}
-        binding.ivDeleteRun.setOnClickListener { if (serviceValid) createNewRun() }
+        binding.ivDeleteRun.setOnClickListener { if (serviceValid) createNewIndependentRun() }
         binding.ivSaveRun.setOnClickListener {
             if (serviceValid) {
                 val run = service.activeRun
                 val runName = binding.editRunName.text.toString()
-                viewModel.uploadRun(run, runName)
-                createNewRun()
+                if (createTrack.value!!) {
+                    val trackName = binding.editTrackName.text.toString()
+                    val flooring = getFlooring()
+                    viewModel.uploadRunWithTrack(run, runName, trackName, flooring)
+                } else viewModel.uploadRun(run, runName)
+                createNewIndependentRun()
             }
         }
+        binding.tvPotentialTrack.setOnClickListener { createTrack.value = !createTrack.value!!}
 
         // Important note on why we are adding observers in onCreate and not in onResume
         // 1. If we were to add them in onResume, we would be held accountable to remove them in onPause.
@@ -119,6 +126,11 @@ class HomeFragment : Fragment() {
         viewModel.otherUsersChanges.observe(viewLifecycleOwner, userPositionsObserver)
         viewModel.showOtherUsers.observe(viewLifecycleOwner, showOtherUsersObserver)
         viewModel.instantToast.observe(viewLifecycleOwner) { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+
+        createTrack.observe(viewLifecycleOwner) {
+            if (it) { binding.llTrackCreation.visibility = View.VISIBLE; binding.tvPotentialTrack.text = getString(R.string.cancel_create_track)}
+            else { binding.llTrackCreation.visibility = View.GONE; binding.tvPotentialTrack.text = getString(R.string.create_track) }
+        }
         return binding.root
     }
 
@@ -240,6 +252,7 @@ class HomeFragment : Fragment() {
                 llActivityDone.visibility = View.GONE
                 when(status!!) {
                     RunStatus.NOT_SET -> {
+                        createTrack.value = false
                         binding.map.overlays.remove(currentRunPath)
                         binding.map.invalidate()
                         ivStartRun.visibility = View.VISIBLE
@@ -264,9 +277,15 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun createNewRun() {
+    private fun createNewIndependentRun() {
         service.activeRun.currentStatus.removeObserver(runStatusObserver)
-        service.createNewRun()
+        service.createNewIndependentRun()
+        service.activeRun.currentStatus.observe(viewLifecycleOwner, runStatusObserver)
+    }
+
+    private fun createNewTaskRun(track: Track) {
+        service.activeRun.currentStatus.removeObserver(runStatusObserver)
+        service.createNewTrackRun(track)
         service.activeRun.currentStatus.observe(viewLifecycleOwner, runStatusObserver)
     }
 
@@ -278,6 +297,15 @@ class HomeFragment : Fragment() {
         currentRunPath.setPoints(service.activeRun.path)
         binding.map.overlays.add(currentRunPath)
         binding.map.invalidate()
+    }
+
+    private fun getFlooring(): TrackFlooring {
+        return when(binding.rgTrackFlooring.checkedRadioButtonId) {
+            R.id.rbAsphalt -> TrackFlooring.ASPHALT
+            R.id.rbGravel -> TrackFlooring.GRAVEL
+            R.id.rbOther -> TrackFlooring.OTHER
+            else -> { TrackFlooring.OTHER}
+        }
     }
 
     private fun trackTime() {

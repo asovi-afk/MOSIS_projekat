@@ -22,9 +22,7 @@ import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.R
 import com.mosis.stepby.utils.FirestoreCollections
 import com.mosis.stepby.utils.UserLocationKeys
-import com.mosis.stepby.utils.running.IndependentRun
-import com.mosis.stepby.utils.running.RunException
-import com.mosis.stepby.utils.running.RunStatus
+import com.mosis.stepby.utils.running.*
 import org.osmdroid.util.GeoPoint
 
 
@@ -35,6 +33,8 @@ class GPSService: Service() {
     // activeRun - Because service can run in foreground it is best suited for keeping reference.
     private var _activeRun = IndependentRun()
     val activeRun: IndependentRun get() = _activeRun
+    private var _followsTrack = false
+    val followsTrack: Boolean get() = _followsTrack
 
 
     private var currentUserEmail: String? = null
@@ -98,8 +98,14 @@ class GPSService: Service() {
         currentUserEmail = email
     }
 
-    fun createNewRun() {
+    fun createNewIndependentRun() {
         _activeRun = IndependentRun()
+        _followsTrack = false
+    }
+
+    fun createNewTrackRun(track: Track) {
+        _activeRun = TrackRun(track)
+        _followsTrack = true
     }
 
     private fun registerLocationListener() {
