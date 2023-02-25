@@ -72,6 +72,17 @@ open class IndependentRun() {
     companion object {
         const val TAG = "IndependentRun"
         private const val DEFAULT_RUN_NAME = "My run"
+
+        private object PointKeys {
+            const val LATITUDE = "latitude"
+            const val LONGITUDE = "longitude"
+        }
+
+        fun mapListToPoints(mapList: List<HashMap<String, Any>>): List<GeoPoint> {
+            val points = mutableListOf<GeoPoint>()
+            mapList.forEach { map -> points.add(GeoPoint(map[PointKeys.LATITUDE] as Double, map[PointKeys.LONGITUDE] as Double)) }
+            return points
+        }
     }
 }
 

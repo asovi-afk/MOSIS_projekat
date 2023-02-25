@@ -9,12 +9,13 @@ import com.mosis.stepby.utils.UserInfoKeys
 import kotlinx.coroutines.tasks.await
 import org.osmdroid.util.GeoPoint
 
-data class Track(private val _path: List<GeoPoint>, private val _name: String, private val _id: String, private val _creatorEmail: String, private val _flooring: TrackFlooring) {
+data class Track(private val _path: List<GeoPoint>, private val _name: String, private val _id: String, private val _creatorEmail: String, private val _flooring: TrackFlooring, private val _distance: Long) {
     val path: List<GeoPoint> get() = _path
     val name: String get() = _name
     val id: String get() = _id
     val creatorEmail: String get() = _creatorEmail
     val flooring: TrackFlooring get() = _flooring
+    val distance: Long get() = _distance
 
     // suspend fun getRuns(): List<Pair<String, IndependentRun>> {}
 
@@ -32,12 +33,13 @@ data class Track(private val _path: List<GeoPoint>, private val _name: String, p
             return username + DEFAULT_NAME_POSTFIX
         }
 
-        fun formatForUpload(path: List<GeoPoint>, creatorEmail: String, flooring: TrackFlooring, name: String): HashMap<String, Any> {
+        fun formatForUpload(path: List<GeoPoint>, creatorEmail: String, flooring: TrackFlooring, name: String, distance: Long): HashMap<String, Any> {
             return hashMapOf(
                 TrackKeys.POINTS to path,
                 TrackKeys.CREATOR_EMAIL to creatorEmail,
                 TrackKeys.FLOORING to flooring.name,
-                TrackKeys.NAME to name
+                TrackKeys.NAME to name,
+                TrackKeys.DISTANCE to distance
             )
         }
 
@@ -45,12 +47,13 @@ data class Track(private val _path: List<GeoPoint>, private val _name: String, p
             val doc = firestore.collection(FirestoreCollections.TRACKS).document(id).get().await()
             if (doc.data == null || doc.data!!.isEmpty() ) throw Exception("Track ID not valid.")
 
-            val path = doc.get(TrackKeys.POINTS) as List<GeoPoint>
+            val path = IndependentRun.mapListToPoints(doc.get(TrackKeys.POINTS) as List<HashMap<String, Any>>)
             val name = doc.getString(TrackKeys.NAME)!!
             val email = doc.getString(TrackKeys.CREATOR_EMAIL)!!
             val flooring = TrackFlooring.valueOf(doc.getString(TrackKeys.FLOORING)!!)
+            val distance = doc.getLong(TrackKeys.DISTANCE)!!
 
-            return Track(path, name, id, email, flooring)
+            return Track(path, name, id, email, flooring, distance)
         }
     }
 }

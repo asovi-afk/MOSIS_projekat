@@ -42,4 +42,5 @@ object TrackKeys {
     const val CREATOR_EMAIL = "creatorEmail"
     const val FLOORING = "flooring"
     const val RUNS = "runs"
+    const val DISTANCE = "distance"
 }

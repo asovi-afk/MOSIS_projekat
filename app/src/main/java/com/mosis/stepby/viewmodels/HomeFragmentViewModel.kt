@@ -15,10 +15,7 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import com.mosis.stepby.utils.*
-import com.mosis.stepby.utils.running.IndependentRun
-import com.mosis.stepby.utils.running.Track
-import com.mosis.stepby.utils.running.TrackFlooring
-import com.mosis.stepby.utils.running.TrackRun
+import com.mosis.stepby.utils.running.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
@@ -107,10 +104,10 @@ class HomeFragmentViewModel: ViewModel() {
             .addOnFailureListener { _instantToast.value = "Run not saved." }
     }
 
-    fun uploadRunWithTrack(run: IndependentRun, _runName: String?, _trackName: String?, flooring: TrackFlooring) {
+    fun uploadRunWithTrack(run: IndependentRun, _runName: String?, _trackName: String?, flooring: TrackFlooring, distance: Long) {
         coroutineScope.launch {
             val trackName = if(_trackName.isNullOrBlank()) Track.generateDefaultName(userEmail, firestore) else _trackName
-            val trackInfo = Track.formatForUpload(run.path, userEmail, flooring, trackName)
+            val trackInfo = Track.formatForUpload(run.path, userEmail, flooring, trackName, distance)
             val trackID = firestore.collection(FirestoreCollections.TRACKS).add(trackInfo).await().id
 
             val runInfo = TrackRun.formatIndependentRunForUpload(run, _runName, trackID, userEmail)
@@ -118,6 +115,13 @@ class HomeFragmentViewModel: ViewModel() {
                 .addOnSuccessListener { _instantToast.value = "Run saved." }
                 .addOnFailureListener { _instantToast.value = "Run not saved." }
         }
+    }
+
+    fun uploadTrackRun(run: TrackRun, name: String?) {
+            val runInfo = run.formatForUpload(name, userEmail)
+            firestore.collection(FirestoreCollections.RUNS).add(runInfo)
+                .addOnSuccessListener { _instantToast.value = "Run saved." }
+                .addOnFailureListener { _instantToast.value = "Run not saved." }
     }
 
     private suspend fun onLocationChangeLogic() {

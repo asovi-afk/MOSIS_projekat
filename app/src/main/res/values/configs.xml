@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="iv_dim">45dp</dimen>
+    <dimen name="iv_dim_small">25dp</dimen>
+    <dimen name="edge_padding">20dp</dimen>
 </resources>

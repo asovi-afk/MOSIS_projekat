@@ -7,7 +7,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.IBinder
 import android.preference.PreferenceManager
@@ -29,8 +32,10 @@ import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.databinding.FragmentHomeBinding
 import com.mosis.stepby.services.GPSService
 import com.mosis.stepby.utils.OtherUserInfo
+import com.mosis.stepby.utils.distanceToString
 import com.mosis.stepby.utils.durationToString
 import com.mosis.stepby.utils.running.*
+import com.mosis.stepby.utils.running.osmdroid.TrackMarkerManager
 import com.mosis.stepby.viewmodels.HomeFragmentViewModel
 import com.mosis.stepby.viewmodels.MainActivityViewModel
 import kotlinx.coroutines.*
@@ -53,6 +58,8 @@ class HomeFragment : Fragment() {
     private lateinit var currentPositionObserver: Observer<GeoPoint>
     private lateinit var showOtherUsersObserver: Observer<Boolean>
     private lateinit var runStatusObserver: Observer<RunStatus>
+    private lateinit var showTracksObserver: Observer<List<Track>>
+    private lateinit var trackInfoObserver: Observer<Track>
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
     private lateinit var connection: ServiceConnection
@@ -62,8 +69,17 @@ class HomeFragment : Fragment() {
 
     private var lastUsersMarkerList = listOf<Marker>()
     private lateinit var currentRunPath: Polyline
+    private lateinit var currentTrackPathToRun: Polyline
+    private lateinit var currentTrackRanPath: Polyline
+    private lateinit var finishMarker: Marker
+
+    private var trackManager: TrackMarkerManager? = null
 
     private val createTrack = MutableLiveData<Boolean>(false)
+    private val filterShown = MutableLiveData<Boolean>(false)
+    private val trackInfo = MutableLiveData<Track>()
+
+    private lateinit var flag: Drawable
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,11 +98,15 @@ class HomeFragment : Fragment() {
     ): View? {
         Log.d(TAG, "onCreateView")
 
+        flag = BitmapDrawable(resources, getFlagBitmap())
+
         getInstance().setUserAgentValue(BuildConfig.APPLICATION_ID)
         getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context));
 
         // Polyline object gets destroyed in fragments onDestroyView()
         currentRunPath = Polyline()
+        currentTrackPathToRun = Polyline()
+        currentTrackRanPath = Polyline()
 
         binding = FragmentHomeBinding.inflate(inflater, container, false)
         markerCurrentPosition = Marker(binding.map)
@@ -95,10 +115,29 @@ class HomeFragment : Fragment() {
         binding.map.setTileSource(TileSourceFactory.MAPNIK)
         binding.map.controller.setZoom(19.0)
         binding.map.controller.setCenter(GeoPoint(43.32472, 21.90333))
+        // Marker is used when currentTrackPathToRun has only one GeoPoint left.
+        // Polyline with one GeoPoint is not shown on map.
+        finishMarker = Marker(binding.map)
+        finishMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        finishMarker.icon = ContextCompat.getDrawable(context!!, R.drawable.ic_baseline_finish_24)
+
 
         binding.swcShowOtherUsers.setOnClickListener { viewModel.showOtherUsers.value = !(viewModel.showOtherUsers.value!!) }
 
-        binding.ivStartRun.setOnClickListener { try { if (serviceValid) service.activeRun.start(service.currentPosition.value) } catch(e: RunException) { toastMessage(e.message) }}
+        binding.ivStartRun.setOnClickListener {
+            try {
+                if (serviceValid) {
+                    if (trackInfo.value == null)
+                        service.activeRun.start(service.currentPosition.value)
+                    else if (TrackRun.canStartRun(trackInfo.value!!, service.currentPosition.value)) {
+                        createNewTrackRun(trackInfo.value!!)
+                        service.activeRun.start(service.currentPosition.value)
+                    } else
+                        Toast.makeText(context, "Get closer to start.", Toast.LENGTH_SHORT).show()
+                } else
+                    Toast.makeText(context, "Location service unavailable.", Toast.LENGTH_SHORT).show()
+            } catch(e: RunException) { toastMessage(e.message) }
+        }
         binding.ivStopRun.setOnClickListener { try { if (serviceValid) service.activeRun.stop() } catch(e: RunException) {toastMessage(e.message)}}
         binding.ivDeleteRun.setOnClickListener { if (serviceValid) createNewIndependentRun() }
         binding.ivSaveRun.setOnClickListener {
@@ -108,12 +147,22 @@ class HomeFragment : Fragment() {
                 if (createTrack.value!!) {
                     val trackName = binding.editTrackName.text.toString()
                     val flooring = getFlooring()
-                    viewModel.uploadRunWithTrack(run, runName, trackName, flooring)
-                } else viewModel.uploadRun(run, runName)
+                    viewModel.uploadRunWithTrack(run, runName, trackName, flooring, run.currentDistance.toLong())
+                }
+                else if (service.followsTrack) viewModel.uploadTrackRun(run as TrackRun, runName)
+                else viewModel.uploadRun(run, runName)
                 createNewIndependentRun()
             }
         }
         binding.tvPotentialTrack.setOnClickListener { createTrack.value = !createTrack.value!!}
+        binding.ivFilterTrack.setOnClickListener { filterShown.value = !filterShown.value!! }
+        binding.sbFilterRadius.run {
+            valueTo = TrackFilter.RADIUS_ALL.toFloat()
+            valueFrom = TrackFilter.RADIUS_NONE.toFloat()
+            stepSize = (valueTo - valueFrom) / 50.0f
+            addOnChangeListener { _, value, _ -> binding.tvFilterRadiusValue.text = formatRadiusValue(value) }
+            values = mutableListOf(TrackFilter.RADIUS_ALL.toFloat())
+        }
 
         // Important note on why we are adding observers in onCreate and not in onResume
         // 1. If we were to add them in onResume, we would be held accountable to remove them in onPause.
@@ -131,6 +180,11 @@ class HomeFragment : Fragment() {
             if (it) { binding.llTrackCreation.visibility = View.VISIBLE; binding.tvPotentialTrack.text = getString(R.string.cancel_create_track)}
             else { binding.llTrackCreation.visibility = View.GONE; binding.tvPotentialTrack.text = getString(R.string.create_track) }
         }
+        filterShown.observe(viewLifecycleOwner) {
+            if (it) binding.llTrackFilter.visibility = View.VISIBLE
+            else { binding.llTrackFilter.visibility = View.GONE; setTrackFilter() }
+        }
+        trackInfo.observe(viewLifecycleOwner, trackInfoObserver)
         return binding.root
     }
 
@@ -154,6 +208,7 @@ class HomeFragment : Fragment() {
         if (serviceValid) {
             service.currentPosition.removeObserver(currentPositionObserver)
             service.activeRun.currentStatus.removeObserver(runStatusObserver)
+            service.visibleTracks.removeObserver(showTracksObserver)
             activity!!.unbindService(connection)
             serviceValid = false
         }
@@ -164,6 +219,7 @@ class HomeFragment : Fragment() {
 
     override fun onDestroyView() {
         Log.d(TAG, "onDestroyView()")
+        trackManager?.clear()
         super.onDestroyView()
     }
 
@@ -175,14 +231,17 @@ class HomeFragment : Fragment() {
                 service = binder.service
                 serviceValid = true
 
+                setTrackFilter()
+
                 service.currentPosition.observe(viewLifecycleOwner, currentPositionObserver)
                 service.activeRun.currentStatus.observe(viewLifecycleOwner, runStatusObserver)
+                service.visibleTracks.observe(viewLifecycleOwner, showTracksObserver)
                 service.setUserEmail(Firebase.auth.currentUser?.email!!)
             }
 
             override fun onServiceDisconnected(p0: ComponentName?) {
                 Log.d(TAG, "onServiceDisconnected")
-                // NOTE: After changes to managing services don't know if this problem persists (haven't tested it).
+                // NOTE: After changes to managing services I don't know if this problem persists (haven't tested it yet).
                 // PROBLEM:
                 // For some reason this code won't be called when minimizing activity with this home fragment on top of fragmentStack. All other combinations work as intended.
                 // Therefore, this line of code is directly called from within onPause() method too.
@@ -190,6 +249,7 @@ class HomeFragment : Fragment() {
                 // It should also be invoked here in the event that the service is stopped. ( Signing out )
                 service.currentPosition.removeObserver(currentPositionObserver)
                 service.activeRun.currentStatus.removeObserver(runStatusObserver)
+                service.visibleTracks.removeObserver(showTracksObserver)
             }
         }
     }
@@ -202,6 +262,11 @@ class HomeFragment : Fragment() {
                 if (service.activeRun.currentStatus.value == RunStatus.IN_PROGRESS){
                     updateDistance()
                     currentRunPath.addPoint(point)
+                    if (service.followsTrack) {
+                        val run = service.activeRun as TrackRun
+                        currentTrackPathToRun.setPoints(run.pathToRun)
+                        currentTrackRanPath.setPoints(run.trackRanPath)
+                    }
                 }
                 markerCurrentPosition.position = point
                 overlays.add(markerCurrentPosition)
@@ -252,8 +317,16 @@ class HomeFragment : Fragment() {
                 llActivityDone.visibility = View.GONE
                 when(status!!) {
                     RunStatus.NOT_SET -> {
+                        // IMPORTANT NOTE!
+                        // This is default state in between any two runs.
+                        // Q: Why?
+                        // A: Because whenever we save, delete or finish active run unexpectedly 'createNewIndependentRun()' is called.
+                        //      Thus, 'runStatusObserver' observer will be triggered for this, 'RunStatus.NOT_SET' code part.
                         createTrack.value = false
                         binding.map.overlays.remove(currentRunPath)
+                        binding.map.overlays.remove(currentTrackPathToRun)
+                        binding.map.overlays.remove(currentTrackRanPath)
+                        binding.map.overlays.remove(finishMarker)
                         binding.map.invalidate()
                         ivStartRun.visibility = View.VISIBLE
                     }
@@ -268,10 +341,41 @@ class HomeFragment : Fragment() {
                         timer?.cancel()
                         tvDurationValue.text = service.activeRun.getDurationFormatted()
                         updateDistance()
-                        llActivity.visibility = View.VISIBLE
-                        llActivityDone.visibility = View.VISIBLE
-                        setAndDrawCurrentRunPath()
+
+                        // Check if run has at least one point other than starting point.
+                        // It would be better to check for distance instead, but first option is debug friendly.
+                        if (service.activeRun.path.size == 1) {
+                            createNewIndependentRun()
+                            Toast.makeText(context, "Run too short.", Toast.LENGTH_SHORT).show()
+                        }
+                        else if (service.followsTrack && (service.activeRun as TrackRun).pathToRun.isNotEmpty() ) {
+                            createNewIndependentRun()
+                            Toast.makeText(context, "Track run not finished.", Toast.LENGTH_SHORT).show()
+                        }
+                        else {
+                            llActivity.visibility = View.VISIBLE
+                            llActivityDone.visibility = View.VISIBLE
+                            tvPotentialTrack.visibility = if (service.followsTrack) View.GONE else View.VISIBLE
+                            setAndDrawCurrentRunPath()
+                        }
                     }
+                }
+            }
+        }
+
+        showTracksObserver = Observer { tracks ->
+            trackManager?.clear()
+            trackManager = TrackMarkerManager(binding.map, tracks, flag, { track -> trackInfo.value = if (trackInfo.value == track) null else track })
+        }
+
+        trackInfoObserver = Observer { track ->
+            if (track == null) binding.llTrackInfo.visibility = View.GONE
+            else {
+                binding.run {
+                    tvTrackInfoType.text = track.flooring.name
+                    tvTrackInfoDistance.text = distanceToString(track.distance)
+                    ivGetTrackInfo.setOnClickListener { Toast.makeText(context,"Hello There", Toast.LENGTH_SHORT).show() }
+                    llTrackInfo.visibility = View.VISIBLE
                 }
             }
         }
@@ -283,7 +387,7 @@ class HomeFragment : Fragment() {
         service.activeRun.currentStatus.observe(viewLifecycleOwner, runStatusObserver)
     }
 
-    private fun createNewTaskRun(track: Track) {
+    private fun createNewTrackRun(track: Track) {
         service.activeRun.currentStatus.removeObserver(runStatusObserver)
         service.createNewTrackRun(track)
         service.activeRun.currentStatus.observe(viewLifecycleOwner, runStatusObserver)
@@ -291,6 +395,24 @@ class HomeFragment : Fragment() {
 
     private fun setAndDrawCurrentRunPath() {
         Log.d(TAG, "setAndDrawCurrentRunPath()")
+        if (service.followsTrack) {
+            val run = service.activeRun as TrackRun
+
+            binding.map.overlays.remove(currentTrackPathToRun)
+            currentTrackPathToRun = Polyline()
+            currentTrackPathToRun.color = TRACK_PATH_TO_RUN_COLOR
+            currentTrackPathToRun.setPoints(run.pathToRun)
+            binding.map.overlays.add(currentTrackPathToRun)
+
+            binding.map.overlays.remove(currentTrackRanPath)
+            currentTrackRanPath = Polyline()
+            currentTrackRanPath.color = TRACK_PATH_RAN_COLOR
+            currentTrackRanPath.setPoints(run.trackRanPath)
+            binding.map.overlays.add(currentTrackRanPath)
+
+            finishMarker.position = run.finishPoint
+            binding.map.overlays.add(finishMarker)
+        }
         binding.map.overlays.remove(currentRunPath)
         currentRunPath = Polyline()
         currentRunPath.color = PATH_RAN_COLOR
@@ -306,6 +428,22 @@ class HomeFragment : Fragment() {
             R.id.rbOther -> TrackFlooring.OTHER
             else -> { TrackFlooring.OTHER}
         }
+    }
+
+    private fun setTrackFilter() {
+        if (serviceValid) {
+            binding.run {
+                val radius = sbFilterRadius.values.first().toInt()
+                val filter = TrackFilter(radius, swcFilterAsphalt.isChecked, swcFilterGravel.isChecked, swcFilterOther.isChecked)
+                service.setTrackFilter(filter)
+            }
+        }
+    }
+
+    private fun formatRadiusValue(value: Float): String {
+        return if (value.toInt() == TrackFilter.RADIUS_NONE) "don't show tracks"
+        else if (value.toInt() == TrackFilter.RADIUS_ALL) "show all tracks"
+        else value.toInt().toString() + " m"
     }
 
     private fun trackTime() {
@@ -337,6 +475,13 @@ class HomeFragment : Fragment() {
         }
     }
 
+    private fun getFlagBitmap(): Bitmap {
+        val bitmap = BitmapFactory.decodeResource(resources, R.mipmap.race_flag)
+        val radius = 85.0
+        val factor = radius / bitmap.height
+        return Bitmap.createScaledBitmap(bitmap, (bitmap.width * factor).toInt(), (bitmap.height * factor).toInt(), true)
+    }
+
     private fun toastMessage(msg: String) { Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
 
 
@@ -344,6 +489,7 @@ class HomeFragment : Fragment() {
         const val TAG = "HomeFragment"
 
         val PATH_RAN_COLOR = ColorHelper.HSLToColor(39.0f, 100.0f,50.0f)
-
+        val TRACK_PATH_TO_RUN_COLOR = ColorHelper.HSLToColor(19.0f, 70.0f,50.0f)
+        val TRACK_PATH_RAN_COLOR = ColorHelper.HSLToColor(100.0f, 120.0f,89.0f)
     }
 }
