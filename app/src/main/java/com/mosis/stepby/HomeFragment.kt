@@ -365,6 +365,7 @@ class HomeFragment : Fragment() {
 
         showTracksObserver = Observer { tracks ->
             trackManager?.clear()
+            trackInfo.value = null
             trackManager = TrackMarkerManager(binding.map, tracks, flag, { track -> trackInfo.value = if (trackInfo.value == track) null else track })
         }
 

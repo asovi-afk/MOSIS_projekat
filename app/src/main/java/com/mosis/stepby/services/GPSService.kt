@@ -191,16 +191,11 @@ class GPSService: Service() {
         // GPS based
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
             500L, 1.0f, locationListener)
-        // Network based
+        // Network based. Not in use since it disables setting custom location in emulators
         //locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000L, 5.0f, locationListener )
     }
 
     private fun generateNotification(): Notification {
-//        val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, "Stepby", NotificationManager.IMPORTANCE_DEFAULT)
-//        channel.description = "Stepby GPS service notification channel"
-
-        //val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        //notificationManager.createNotificationChannel(channel)
 
         val notificationBuilder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_round)

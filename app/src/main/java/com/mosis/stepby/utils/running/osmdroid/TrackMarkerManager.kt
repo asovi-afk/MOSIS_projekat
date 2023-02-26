@@ -14,8 +14,7 @@ import org.osmdroid.views.overlay.Marker
 class TrackMarkerManager(private val mapView: MapView, tracks: List<Track>, flag: Drawable, onClickAction: (Track) -> Unit): AutoCloseable {
 
     private val markers = mutableListOf<TrackMarker>()
-    private val _selected = MutableLiveData<TrackMarker>()
-    val selected: LiveData<TrackMarker> get() = _selected
+    private var selected: TrackMarker? = null
 
     private val clickCH = Channel<TrackMarker>(Channel.CONFLATED)
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -47,8 +46,8 @@ class TrackMarkerManager(private val mapView: MapView, tracks: List<Track>, flag
     fun clear() {
         Log.d(TAG, "clear")
         coroutineScope.cancel()
-        _selected.value?.hide()
-        _selected.value = null
+        selected?.hide()
+        selected = null
         mapView.overlays.removeAll(markers)
         mapView.invalidate()
     }
@@ -62,10 +61,10 @@ class TrackMarkerManager(private val mapView: MapView, tracks: List<Track>, flag
         while(true) {
             val marker = clickCH.receive()
             withContext(Dispatchers.Main) {
-                when (_selected.value) {
-                    null -> { marker.show(); _selected.value = marker }
-                    marker -> { marker.hide(); _selected.value = null }
-                    else -> { _selected.value!!.hide(); marker.show(); _selected.value = marker }
+                when (selected) {
+                    null -> { marker.show(); selected = marker }
+                    marker -> { marker.hide(); selected = null }
+                    else -> { selected!!.hide(); marker.show(); selected = marker }
                 }
             }
         }
