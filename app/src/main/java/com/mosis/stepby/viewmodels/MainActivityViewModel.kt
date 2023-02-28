@@ -11,6 +11,8 @@ class MainActivityViewModel : ViewModel() {
     val runBackground = MutableLiveData<Boolean>(true)
     val loggedIn = MutableLiveData<Boolean>(false)
 
+    var userPreviewEmail: String? = null
+
     private lateinit var currentUserKey: String
 
     public fun importUserData() {

@@ -53,6 +53,11 @@
             app:destination="@id/settingsFragment"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_homeFragment_to_otherProfileFragment"
+            app:destination="@id/otherProfileFragment"
+            app:popUpTo="@id/homeFragment"
+            app:popUpToInclusive="false" />
     </fragment>
     <fragment
         android:id="@+id/personalizeFragment"
@@ -97,6 +102,9 @@
             app:launchSingleTop="true"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="false" />
+        <action
+            android:id="@+id/action_profileFragment_to_otherProfileFragment"
+            app:destination="@id/otherProfileFragment" />
     </fragment>
     <fragment
         android:id="@+id/settingsFragment"
@@ -118,5 +126,26 @@
             app:destination="@id/welcomeFragment"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="true" />
+    </fragment>
+    <fragment
+        android:id="@+id/otherProfileFragment"
+        android:name="com.mosis.stepby.OtherProfileFragment"
+        android:label="fragment_other_profile"
+        tools:layout="@layout/fragment_other_profile" >
+        <action
+            android:id="@+id/action_otherProfileFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment"
+            app:popUpTo="@id/homeFragment" />
+        <action
+            android:id="@+id/action_otherProfileFragment_to_profileFragment"
+            app:destination="@id/profileFragment"
+            app:popUpTo="@id/homeFragment" />
+        <action
+            android:id="@+id/action_otherProfileFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/homeFragment" />
+        <action
+            android:id="@+id/action_otherProfileFragment_self"
+            app:destination="@id/otherProfileFragment" />
     </fragment>
 </navigation>

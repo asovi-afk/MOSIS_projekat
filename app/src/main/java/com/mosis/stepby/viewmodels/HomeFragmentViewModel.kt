@@ -15,7 +15,9 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import com.mosis.stepby.utils.*
+import com.mosis.stepby.utils.MemoryValues.ONE_MEGABYTE
 import com.mosis.stepby.utils.running.*
+import com.mosis.stepby.utils.running.ranking.RankingManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.sync.Mutex
@@ -36,8 +38,8 @@ class HomeFragmentViewModel: ViewModel() {
     val showOtherUsers = MutableLiveData<Boolean>(true)
     val otherUsersChanges = MutableLiveData<List<OtherUserInfo>>()
 
-    private val _instantToast = MutableLiveData<String>()
-    val instantToast: LiveData<String> get() = _instantToast
+    private val _instantToast = MutableLiveData<String?>(null)
+    val instantToast: LiveData<String?> get() = _instantToast
 
     private val bitmapList: MutableList<Pair<String, Bitmap>> = mutableListOf()
     private val mutex = Mutex()  // Used to lock for simultaneous changes on bitmapList, otherUsersChanges and friendList.
@@ -102,6 +104,8 @@ class HomeFragmentViewModel: ViewModel() {
         firestore.collection(FirestoreCollections.RUNS).add(runInfo)
             .addOnSuccessListener { _instantToast.value = "Run saved." }
             .addOnFailureListener { _instantToast.value = "Run not saved." }
+
+        coroutineScope.launch{ RankingManager.addDistance(run.currentDistance.toLong(), userEmail) }
     }
 
     fun uploadRunWithTrack(run: IndependentRun, _runName: String?, _trackName: String?, flooring: TrackFlooring, distance: Long) {
@@ -114,15 +118,21 @@ class HomeFragmentViewModel: ViewModel() {
             firestore.collection(FirestoreCollections.RUNS).add(runInfo)
                 .addOnSuccessListener { _instantToast.value = "Run saved." }
                 .addOnFailureListener { _instantToast.value = "Run not saved." }
+
+            RankingManager.addDistance(run.currentDistance.toLong(), userEmail)
         }
     }
 
     fun uploadTrackRun(run: TrackRun, name: String?) {
-            val runInfo = run.formatForUpload(name, userEmail)
-            firestore.collection(FirestoreCollections.RUNS).add(runInfo)
-                .addOnSuccessListener { _instantToast.value = "Run saved." }
-                .addOnFailureListener { _instantToast.value = "Run not saved." }
+        val runInfo = run.formatForUpload(name, userEmail)
+        firestore.collection(FirestoreCollections.RUNS).add(runInfo)
+            .addOnSuccessListener { _instantToast.value = "Run saved." }
+            .addOnFailureListener { _instantToast.value = "Run not saved." }
+
+        coroutineScope.launch{ RankingManager.addDistance(run.currentDistance.toLong(), userEmail) }
     }
+
+    fun clearInstantToast() { _instantToast.value = null}
 
     private suspend fun onLocationChangeLogic() {
         while(true) {
@@ -227,7 +237,6 @@ class HomeFragmentViewModel: ViewModel() {
 
     companion object {
         private const val TAG = "HomeFragmentViewModel"
-        private const val ONE_MEGABYTE = 1024 * 1024.toLong()
         private const val BITMAP_CACHE_MAINTENANCE_CYCLE = 1000 * 60 * 10.toLong() // in milliseconds (10 min)
         private const val BITMAP_RADIUS = 70
     }

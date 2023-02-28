@@ -174,7 +174,7 @@ class HomeFragment : Fragment() {
         // 5. reference activity and fragment life cycles
         viewModel.otherUsersChanges.observe(viewLifecycleOwner, userPositionsObserver)
         viewModel.showOtherUsers.observe(viewLifecycleOwner, showOtherUsersObserver)
-        viewModel.instantToast.observe(viewLifecycleOwner) { msg -> Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+        viewModel.instantToast.observe(viewLifecycleOwner) { msg -> if (!msg.isNullOrBlank()) Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
 
         createTrack.observe(viewLifecycleOwner) {
             if (it) { binding.llTrackCreation.visibility = View.VISIBLE; binding.tvPotentialTrack.text = getString(R.string.cancel_create_track)}
@@ -220,6 +220,7 @@ class HomeFragment : Fragment() {
     override fun onDestroyView() {
         Log.d(TAG, "onDestroyView()")
         trackManager?.clear()
+        viewModel.clearInstantToast()
         super.onDestroyView()
     }
 
@@ -287,6 +288,11 @@ class HomeFragment : Fragment() {
                         BitmapDrawable(resources, info.picture)
                     else
                         ContextCompat.getDrawable(context!!, R.drawable.ic_marker)
+                    marker.setOnMarkerClickListener { _, _ ->
+                        mainVM.userPreviewEmail = info.email
+                        findNavController().navigate(R.id.action_homeFragment_to_otherProfileFragment)
+                        true
+                    }
                     map.overlays.add(marker)
                     newUsersMarkers.add(marker)
                 }

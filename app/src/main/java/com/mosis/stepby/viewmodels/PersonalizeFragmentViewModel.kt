@@ -9,10 +9,8 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
-import com.mosis.stepby.utils.ResponseStatus
-import com.mosis.stepby.utils.FirestoreCollections
-import com.mosis.stepby.utils.StorageFolders
-import com.mosis.stepby.utils.UserInfoKeys
+import com.mosis.stepby.utils.*
+import com.mosis.stepby.utils.running.ranking.RankingManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
@@ -76,6 +74,10 @@ class PersonalizeFragmentViewModel: ViewModel() {
                         it.set(userKey, userInfo)
                         val updatedUsers = users + username
                         it.update(usersRef, FirestoreCollections.USERNAMES, updatedUsers)
+                        RankingManager.onUserCreate(email)
+                        val pendingFriendshipDocRec = db.collection(FirestoreCollections.PENDING_FRIENDSHIPS).document(email)
+                        val pendingFriendshipData = hashMapOf( PendingFriendshipKeys.FROM to listOf<String>())
+                        it.set(pendingFriendshipDocRec, pendingFriendshipData)
                     }
                 } else {
                     responseStatus.postValue(ResponseStatus(false, "Internal server error."))
@@ -95,6 +97,6 @@ class PersonalizeFragmentViewModel: ViewModel() {
 
     companion object {
         const val TAG = "PersonalizeFragmentViewModel"
-        const val DEFAULT_PROFILE_PICTURE = "DEFAULT_PROFILE_PICTURE"
+        const val DEFAULT_PROFILE_PICTURE = "DEFAULT_PROFILE_PICTURE.jpg"
     }
 }

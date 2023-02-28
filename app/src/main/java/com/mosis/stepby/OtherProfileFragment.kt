@@ -1,80 +1,84 @@
 package com.mosis.stepby
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.util.Log
-import android.view.*
+import androidx.fragment.app.Fragment
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
-import com.mosis.stepby.databinding.FragmentProfileBinding
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import com.mosis.stepby.databinding.FragmentOtherProfileBinding
 import com.mosis.stepby.utils.*
 import com.mosis.stepby.utils.adapters.FriendAdapter
 import com.mosis.stepby.utils.adapters.RunAdapter
 import com.mosis.stepby.viewmodels.MainActivityViewModel
-import com.mosis.stepby.viewmodels.ProfileFragmentViewModel
+import com.mosis.stepby.viewmodels.OtherProfileFragmentViewModel
 
-class ProfileFragment : Fragment() {
 
+class OtherProfileFragment : Fragment() {
+
+    private val myEmail = Firebase.auth.currentUser!!.email!!
     private val mainVM: MainActivityViewModel by activityViewModels()
-    private val viewModel: ProfileFragmentViewModel by activityViewModels()
-    private lateinit var binding: FragmentProfileBinding
+    private lateinit var viewModel: OtherProfileFragmentViewModel
+    private lateinit var binding: FragmentOtherProfileBinding
 
     private lateinit var userBasicInfoObserver: Observer<BasicProfileInfo>
     private lateinit var runListObserver: Observer<List<RunInfo>>
     private lateinit var selectedTabObserver: Observer<ProfileTab>
     private lateinit var friendListObserver: Observer<List<FriendInfo>>
-    private lateinit var pendingFriendListObserver: Observer<List<FriendInfo>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         mainVM.locked.value = true
-
+        viewModel = ViewModelProvider(this).get(OtherProfileFragmentViewModel::class.java)
+        viewModel.update(mainVM.userPreviewEmail!!)
     }
 
-    @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
 
-        // Function must be called here because it requires context!!
         generateObservers()
 
-        binding = FragmentProfileBinding.inflate(inflater, container, false)
-
-        // NOTE:
-        // Updated action is really expensive! Consumes many firestore reads
-        binding.ivUpdateRanking.setOnClickListener { mainVM.locked.value = true; viewModel.update() }
-        // Old action
-        //binding.ivUpdateRanking.setOnClickListener { mainVM.locked.value = true; viewModel.updateRanking() }
+        binding = FragmentOtherProfileBinding.inflate(inflater, container, false)
 
         // Toggle visibility of rvPendingFriendList and rvFriendList
-        binding.tvPendingFriendList.setOnClickListener { binding.rvPendingFriendList.run { visibility = if (visibility == View.GONE) View.VISIBLE else View.GONE } }
-        binding.tvFriendList.setOnClickListener { binding.rvFriendList.run { visibility = if (visibility == View.GONE) View.VISIBLE else View.GONE } }
         binding.tvRuns.setOnClickListener { viewModel.selectedTab.value = ProfileTab.RUNS }
         binding.tvTracks.setOnClickListener { viewModel.selectedTab.value = ProfileTab.TRACKS }
         binding.tvFriends.setOnClickListener { viewModel.selectedTab.value = ProfileTab.FRIENDS }
+        binding.ivSendFriendRequest.setOnClickListener { viewModel.addFriend(); binding.ivSendFriendRequest.visibility = View.GONE }
 
         viewModel.userBasicInfo.observe(viewLifecycleOwner, userBasicInfoObserver)
         viewModel.instantToast.observe(viewLifecycleOwner) { msg -> if (!msg.isNullOrBlank()) Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
         viewModel.runList.observe(viewLifecycleOwner, runListObserver)
         viewModel.selectedTab.observe(viewLifecycleOwner, selectedTabObserver)
         viewModel.friendList.observe(viewLifecycleOwner, friendListObserver)
-        viewModel.pendingFriendList.observe(viewLifecycleOwner, pendingFriendListObserver)
+
+        viewModel.friendList.observe(viewLifecycleOwner, Observer { friendList ->
+            binding.ivSendFriendRequest.visibility = if (friendList.firstOrNull { info -> info.email == myEmail } == null) View.VISIBLE else View.GONE
+        })
+
         return binding.root
     }
 
     override fun onDestroyView() {
         viewModel.clearInstantToast()
         super.onDestroyView()
+    }
+
+    override fun onDestroy() {
+        viewModelStore.clear()
+        super.onDestroy()
     }
 
     private fun generateObservers() {
@@ -111,60 +115,29 @@ class ProfileFragment : Fragment() {
 
                 rvRunList.visibility = View.GONE
                 rvTrackList.visibility = View.GONE
-                tvPendingFriendList.visibility = View.GONE
-                rvPendingFriendList.visibility = View.GONE
-                tvFriendList.visibility = View.GONE
                 rvFriendList.visibility = View.GONE
 
                 when(tab!!) {
                     ProfileTab.RUNS -> { rvRunList.visibility = View.VISIBLE; tabSelected(tvRuns) }
                     ProfileTab.TRACKS -> { rvTrackList.visibility = View.VISIBLE; tabSelected(tvTracks) }
-                    ProfileTab.FRIENDS -> {
-                        tvPendingFriendList.visibility = View.VISIBLE
-                        tvFriendList.visibility = View.VISIBLE
-                        rvFriendList.visibility = View.VISIBLE
-
-                        tabSelected(tvFriends)
-                    }
+                    ProfileTab.FRIENDS -> { rvFriendList.visibility = View.VISIBLE; tabSelected(tvFriends) }
                 }
             }
         }
 
         friendListObserver = Observer { list ->
-            val friendAdapter = FriendAdapter(list, cancel = true)
-            friendAdapter.setOnCancelClickListener(object: FriendAdapter.OptionClickListener {
-                override fun onClick(pos: Int, views: List<View>) {
-                    viewModel.removeFriend(list[pos].email, views)
-                }
-            })
+            val friendAdapter = FriendAdapter(list)
             friendAdapter.setOnItemClickListener(object: FriendAdapter.ClickListener {
                 override fun onClick(pos: Int, view: View) {
-                    mainVM.userPreviewEmail = list[pos].email
-                    findNavController().navigate(R.id.action_profileFragment_to_otherProfileFragment)
+                    val email = list[pos].email
+                    if (email != myEmail) {
+                        mainVM.userPreviewEmail = list[pos].email
+                        findNavController().navigate(R.id.action_otherProfileFragment_self)
+                    }
+                    else findNavController().navigate(R.id.action_otherProfileFragment_to_profileFragment)
                 }
             })
             binding.rvFriendList.adapter = friendAdapter
-        }
-
-        pendingFriendListObserver = Observer { list ->
-            val pendingFriendAdapter = FriendAdapter(list, true, true)
-            pendingFriendAdapter.setOnCancelClickListener(object: FriendAdapter.OptionClickListener {
-                override fun onClick(pos: Int, views: List<View>) {
-                    viewModel.declineFriendship(list[pos].email, views)
-                }
-            })
-            pendingFriendAdapter.setOnAcceptClickListener(object : FriendAdapter.OptionClickListener {
-                override fun onClick(pos: Int, views: List<View>) {
-                    viewModel.acceptFriendship(list[pos].email, views)
-                }
-            })
-            pendingFriendAdapter.setOnItemClickListener(object: FriendAdapter.ClickListener {
-                override fun onClick(pos: Int, view: View) {
-                    mainVM.userPreviewEmail = list[pos].email
-                    findNavController().navigate(R.id.action_profileFragment_to_otherProfileFragment)
-                }
-            })
-            binding.rvPendingFriendList.adapter = pendingFriendAdapter
         }
     }
 
@@ -179,8 +152,6 @@ class ProfileFragment : Fragment() {
     }
 
     companion object {
-        private const val TAG = "ProfileFragment"
-
-
+        const val TAG = "OtherProfileFragment"
     }
 }

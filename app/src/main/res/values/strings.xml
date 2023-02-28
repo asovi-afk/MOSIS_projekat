@@ -8,4 +8,9 @@
     <string name="type_asphalt">Asphalt</string>
     <string name="type_gravel">Gravel</string>
     <string name="type_other">Other</string>
+
+    <string name="email_unknown">email: /</string>
+    <string name="username_unknown">username: /</string>
+    <string name="rank_unknown">rank: /</string>
+    <string name="distance_unknown">distance: /</string>
 </resources>

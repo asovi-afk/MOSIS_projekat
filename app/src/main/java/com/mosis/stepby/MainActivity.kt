@@ -18,6 +18,7 @@ import androidx.core.view.forEach
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Observer
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination
 import androidx.navigation.Navigation
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
@@ -27,6 +28,7 @@ import com.google.firebase.ktx.Firebase
 import com.mosis.stepby.databinding.ActivityMainBinding
 import com.mosis.stepby.services.GPSService
 import com.mosis.stepby.viewmodels.MainActivityViewModel
+import com.mosis.stepby.viewmodels.ProfileFragmentViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.GlobalScope.coroutineContext
 
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainActivityViewModel by viewModels()
+    private val profileFragmentVM: ProfileFragmentViewModel by viewModels()
 
     private lateinit var navController: NavController
     private val auth = Firebase.auth
@@ -79,7 +82,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        viewModel.loggedIn.observe(this, Observer { if (it) startServicesInBackground()})
+        viewModel.loggedIn.observe(this, Observer { if (it) { startServicesInBackground(); profileFragmentVM.update()} })
     }
 
     override fun onBackPressed() {
@@ -126,6 +129,13 @@ class MainActivity : AppCompatActivity() {
                 R.id.profile -> defineNavBarProfile(it)
             }
         }
+
+        // Patch
+        // Selecting menu item icon when navigating from otherProfileFragment to profileFragment
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.profileFragment)
+                binding.bottomNavigationView.menu.findItem(R.id.profile).isChecked = true
+        }
     }
 
     private fun defineNavBarHome(item: MenuItem) {
@@ -135,6 +145,7 @@ class MainActivity : AppCompatActivity() {
                 when (fid) {
                     R.id.settingsFragment -> navController.navigate(R.id.action_settingsFragment_to_homeFragment)
                     R.id.profileFragment -> navController.navigate(R.id.action_profileFragment_to_homeFragment)
+                    R.id.otherProfileFragment -> navController.navigate(R.id.action_otherProfileFragment_to_homeFragment)
                 }
                 item.isChecked = true
             }
@@ -149,6 +160,7 @@ class MainActivity : AppCompatActivity() {
                 when (fid) {
                     R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_settingsFragment)
                     R.id.profileFragment -> navController.navigate(R.id.action_profileFragment_to_settingsFragment)
+                    R.id.otherProfileFragment -> navController.navigate(R.id.action_otherProfileFragment_to_settingsFragment)
                 }
                 item.isChecked = true
             }
@@ -163,6 +175,7 @@ class MainActivity : AppCompatActivity() {
                 when (fid) {
                     R.id.settingsFragment -> navController.navigate(R.id.action_settingsFragment_to_profileFragment)
                     R.id.homeFragment -> navController.navigate(R.id.action_homeFragment_to_profileFragment)
+                    R.id.otherProfileFragment -> navController.navigate(R.id.action_otherProfileFragment_to_profileFragment)
                 }
                 item.isChecked = true
             }

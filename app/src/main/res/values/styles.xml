@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="profile_option_item">
+        <item name="android:textColor">@color/colorDarkGray</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@color/pozadina</item>
+    </style>
+    <style name="profile_option_item_selected">
+        <item name="android:textColor">@color/ikonice_navbar</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@color/navbar_blue</item>
+    </style>
+
+    <style name="one_runs_segment_header_label">
+        <item name="android:textColor">@color/colorDarkGray</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="one_runs_segment_header_value">
+        <item name="android:textColor">@color/colorGray</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+</resources>
