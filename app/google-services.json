@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "405034775718",
+    "project_id": "stepby-april-c797e",
+    "storage_bucket": "stepby-april-c797e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:405034775718:android:f3da5eac349198a8e53067",
+        "android_client_info": {
+          "package_name": "com.mosis.stepby"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "405034775718-f4pgg4okt970h2kjbc6q53mii9dr1900.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANDLbxM-8vMjN-YGgGiY657Zz2kcGlWXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "405034775718-f4pgg4okt970h2kjbc6q53mii9dr1900.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
